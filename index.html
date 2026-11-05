@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=yes">
     <title>Deeper Deeper</title>
     <!-- 빌드 식별자(버전 git해시). WebHostPostprocessor가 빌드 후 치환. 어느 빌드가 올라갔는지 보기 소스·콘솔·로딩 화면에서 확인. -->
-    <meta name="deeper-build" content="0.9.0 fc7b87a6b">
+    <meta name="deeper-build" content="0.9.0 6f59c58a3">
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body {
@@ -81,7 +81,7 @@
       <div class="logo"></div>
       <div class="bar"><div class="fill"></div></div>
       <div class="text"><span class="label"></span> <span class="pct"></span></div>
-      <div class="build">0.9.0 fc7b87a6b</div>
+      <div class="build">0.9.0 6f59c58a3</div>
     </div>
     <!-- DeeperHost (Plain): 포털 없음. 자체 호스팅·로컬 개발용. 유저는 브라우저 저장소의 게스트 id, 이벤트는 콘솔 로그. -->
     <script>
@@ -109,11 +109,11 @@
         };
       })();
     </script>
-    <script src="Build/0d312e0d3f1953b245b05727d79c0c37.loader.js"></script>
+    <script src="Build/81ee944a1c9fed735c53ee26d07f7c75.loader.js"></script>
     <script>
       var canvas = document.querySelector("#unity-canvas");
       var loading = document.getElementById("deeper-loading");
-      console.log("[Deeper] build 0.9.0 fc7b87a6b");
+      console.log("[Deeper] build 0.9.0 6f59c58a3");
 
       // 세로형 맞춤: 높이는 항상 꽉 채우고, 폭은 "화면 폭"과 "높이×9/16" 중 작은 쪽.
       //  - 세로 폰(9:16보다 길쭉함) → 전체 화면 (검은 띠 없음, 세로로 세상이 조금 더 보임)
@@ -194,9 +194,9 @@
             if (/[0-9a-f]{32}\.data(\.unityweb|\.gz|\.br)?$/.test(url) || /_[0-9a-f]{32}\.bundle$/.test(url)) return "immutable";
             return /\.data|\.bundle/.test(url) ? "must-revalidate" : "no-store";
           },
-          dataUrl: "Build/90588c4105d1291793cd17cd9d716e87.data.unityweb",
+          dataUrl: "Build/b8f9b767f747b839f2e8abbe61de4d3a.data.unityweb",
           frameworkUrl: "Build/abeca120ba6a79d16695cd5ca857aba3.framework.js.unityweb",
-          codeUrl: "Build/d54529c7bf36541e06a0f1440c817b3f.wasm.unityweb",
+          codeUrl: "Build/20a844d12b4b820ac572a3488d439bda.wasm.unityweb",
           streamingAssetsUrl: "StreamingAssets",
           companyName: "Gravity",
           productName: "Deeper Deeper",
