@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<!-- 생성 파일. 직접 고치지 말고 Assets/Scripts/Editor/Build/WebGLTemplateParts~/ 를 고친 뒤
+     Tools/Deeper/Regenerate WebGL Templates 를 실행한다. 호스트: plain -->
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=yes">
+    <title>Deeper Deeper</title>
+    <!-- 빌드 식별자(버전 git해시). WebHostPostprocessor가 빌드 후 치환. 어느 빌드가 올라갔는지 보기 소스·콘솔·로딩 화면에서 확인. -->
+    <meta name="deeper-build" content="0.9.0 fc7b87a6b">
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        width: 100%;
+        height: 100%;
+        background: #231F20;
+        overflow: hidden;
+      }
+      /* 크기·위치는 아래 JS(fitCanvas)가 물리 픽셀 정수로 스냅해서 지정한다.
+         CSS calc로 정하면 소수점 크기가 나와 브라우저가 캔버스를 재샘플링하고,
+         픽셀아트에 가로줄이 생긴다. */
+      #unity-canvas {
+        position: absolute;
+        background: #231F20;
+        touch-action: none;
+      }
+      /* 로딩 화면. Unity가 뜨기 전이라 HTML만으로 그린다. 캔버스와 같은 9:16 상자에 겹쳐 두고(fitCanvas가 위치를 맞춤)
+         첫 프레임이 나오면 페이드아웃. 크기는 상자 폭 기준 em(폭 540px일 때 1em=16px)이라 어떤 iframe 크기에도 비례한다.
+         이미지는 TemplateData/(생성기가 부품 폴더에서 복사). 둘 합쳐 약 70KB. */
+      #deeper-loading {
+        position: absolute; overflow: hidden; z-index: 5;
+        background: #231F20 url(TemplateData/loading-bg.png) center / cover no-repeat;
+        display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+        padding-bottom: 11%;
+        color: #E8E0D0; font-family: -apple-system, "Segoe UI", "Noto Sans", sans-serif;
+        transition: opacity 0.35s ease-out;
+      }
+      #deeper-loading.done { opacity: 0; pointer-events: none; }
+      #deeper-loading .logo {
+        width: 10em; height: 10em; margin-bottom: 1.5em;
+        background: url(TemplateData/logo.png) 0 0 / 40em 20em no-repeat;
+        image-rendering: pixelated; image-rendering: crisp-edges;
+        animation: deeper-logo-mine 1.6s steps(1, end) infinite;
+      }
+      /* 로고 시트 640×320 = 160px 칸 4×2. 곡괭이를 들어 내려찍고 조각이 튀는 8프레임. */
+      @keyframes deeper-logo-mine {
+        0%    { background-position: 0 0; }
+        12.5% { background-position: -10em 0; }
+        25%   { background-position: -20em 0; }
+        37.5% { background-position: -30em 0; }
+        50%   { background-position: 0 -10em; }
+        62.5% { background-position: -10em -10em; }
+        75%   { background-position: -20em -10em; }
+        87.5% { background-position: -30em -10em; }
+      }
+      #deeper-loading .bar {
+        width: 60%; height: 1.25em; padding: 0.25em;
+        border: 0.1875em solid #E8E0D0; background: #231F20;
+      }
+      #deeper-loading .fill { height: 100%; width: 0; background: #E8E0D0; transition: width 0.2s linear; }
+      /* 다운로드가 끝난 뒤(압축 해제·컴파일·포털 접속 대기)는 진행률이 멈추므로, 꽉 찬 막대에 줄무늬를 흘려 멈춘 게 아님을 보여 준다.
+         steps로 끊어 픽셀 느낌. 줄무늬 한 칸(1em)만큼 움직이면 처음과 같은 모양이라 끊김 없이 반복된다. */
+      #deeper-loading.busy .fill {
+        width: 100%;
+        background: repeating-linear-gradient(-45deg, #E8E0D0 0 0.25em, #8F877C 0.25em 0.5em);
+        background-size: 1em 100%;
+        animation: deeper-busy 0.6s steps(4, end) infinite;
+      }
+      @keyframes deeper-busy { from { background-position: 0 0; } to { background-position: 1em 0; } }
+      @media (prefers-reduced-motion: reduce) {
+        #deeper-loading.busy .fill { animation: none; }
+      }
+      #deeper-loading .text { margin-top: 0.75em; font-size: 0.9em; letter-spacing: 0.05em; opacity: 0.9; }
+      #deeper-loading .build { position: absolute; right: 0.6em; bottom: 0.4em; font-size: 0.65em; opacity: 0.35; }
+    </style>
+  </head>
+  <body>
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
+    <div id="deeper-loading">
+      <div class="logo"></div>
+      <div class="bar"><div class="fill"></div></div>
+      <div class="text"><span class="label"></span> <span class="pct"></span></div>
+      <div class="build">0.9.0 fc7b87a6b</div>
+    </div>
+    <!-- DeeperHost (Plain): 포털 없음. 자체 호스팅·로컬 개발용. 유저는 브라우저 저장소의 게스트 id, 이벤트는 콘솔 로그. -->
+    <script>
+      (function () {
+        function guestId() {
+          var key = "deeper.guest-id";
+          try {
+            var id = localStorage.getItem(key);
+            if (!id) {
+              id = "guest-" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+              localStorage.setItem(key, id);
+            }
+            return id;
+          } catch (e) {
+            return "guest-" + Date.now().toString(36); // 저장소가 막힌 브라우저 — 세션 한정 id.
+          }
+        }
+        window.DeeperHost = {
+          capabilities: { identity: true, analytics: false, purchases: false, cloudSave: false, exitRequest: false },
+          getUser: function () {
+            return Promise.resolve({ userId: guestId(), languageTag: navigator.language || null, currency: null });
+          },
+          track: function (event, props) { console.debug("[DeeperHost]", event, props || {}); },
+          on: function () {}
+        };
+      })();
+    </script>
+    <script src="Build/0d312e0d3f1953b245b05727d79c0c37.loader.js"></script>
+    <script>
+      var canvas = document.querySelector("#unity-canvas");
+      var loading = document.getElementById("deeper-loading");
+      console.log("[Deeper] build 0.9.0 fc7b87a6b");
+
+      // 세로형 맞춤: 높이는 항상 꽉 채우고, 폭은 "화면 폭"과 "높이×9/16" 중 작은 쪽.
+      //  - 세로 폰(9:16보다 길쭉함) → 전체 화면 (검은 띠 없음, 세로로 세상이 조금 더 보임)
+      //  - 데스크톱/가로 화면 → 9:16 세로 박스를 중앙 배치
+      // 렌더 버퍼(canvas.width/height)를 여기서 직접 "짝수 물리픽셀"로 지정한다
+      // (아래 createUnityInstance의 matchWebGLToCanvasSize: false와 한 세트).
+      //  - 버퍼 폭/높이가 홀수면 화면 중앙이 픽셀 경계에 반 픽셀 어긋나서
+      //    타일 시트 이음새(가로/세로줄)가 생긴다 → 짝수로 강제
+      //  - CSS 표시 크기 = 버퍼/dpr 로 맞춰 브라우저 재샘플링(고스트 줄)도 차단
+      function fitCanvas() {
+        var dpr = window.devicePixelRatio || 1;
+        var vw = window.innerWidth;
+        var vh = window.innerHeight;
+        var bh = Math.floor(vh * dpr / 2) * 2;
+        var bw = Math.floor(Math.min(vw, vh * 9 / 16) * dpr / 2) * 2;
+        canvas.width = bw;
+        canvas.height = bh;
+        var cssW = (bw / dpr) + "px", cssH = (bh / dpr) + "px";
+        var cssL = Math.round((vw * dpr - bw) / 2) / dpr + "px", cssT = Math.round((vh * dpr - bh) / 2) / dpr + "px";
+        canvas.style.width = cssW;
+        canvas.style.height = cssH;
+        canvas.style.left = cssL;
+        canvas.style.top = cssT;
+        // 로딩 화면은 캔버스와 같은 상자에, 글자·로고 크기는 상자 폭에 비례(폭 540px = 16px).
+        loading.style.width = cssW;
+        loading.style.height = cssH;
+        loading.style.left = cssL;
+        loading.style.top = cssT;
+        loading.style.fontSize = Math.max(10, (bw / dpr) / 540 * 16) + "px";
+      }
+      fitCanvas();
+      window.addEventListener("resize", fitCanvas);
+      window.addEventListener("orientationchange", fitCanvas);
+
+      // 진행 표시. Unity 로더는 다운로드 동안 0→0.9, 초기화(wasm 컴파일)가 끝나면 1.0을 준다.
+      // 0.9 이후는 숫자가 멈추므로 막대를 줄무늬로 흘리고(busy), 포털 식별을 아직 기다리면 "접속 중", 아니면 "시작하는 중".
+      // 채움은 5% 단위로 끊어 픽셀 느낌.
+      var LOAD_TEXT = {
+        ko: { load: "불러오는 중", connect: "접속 중", start: "시작하는 중" },
+        ja: { load: "読み込み中", connect: "接続中", start: "起動中" },
+        en: { load: "Loading", connect: "Connecting", start: "Starting" }
+      };
+      var loadText = LOAD_TEXT[String(navigator.language || "en").slice(0, 2)] || LOAD_TEXT.en;
+      var loadFill = loading.querySelector(".fill");
+      var loadLabel = loading.querySelector(".label");
+      var loadPct = loading.querySelector(".pct");
+      var downloaded = false;
+      var hostPending = false; // 아래에서 호스트가 DeeperHost.ready를 주면 true, 끝나면 false.
+      function refreshLoadLabel() {
+        loadLabel.textContent = !downloaded ? loadText.load : hostPending ? loadText.connect : loadText.start;
+      }
+      function setLoadProgress(p) {
+        downloaded = p >= 0.9;
+        var pct = Math.max(0, Math.min(100, Math.floor((downloaded ? 1 : p / 0.9) * 100)));
+        loadFill.style.width = downloaded ? "" : (Math.floor(pct / 5) * 5) + "%";
+        loading.classList.toggle("busy", downloaded);
+        loadPct.textContent = downloaded ? "" : pct + "%";
+        refreshLoadLabel();
+      }
+      function hideLoading() {
+        loading.classList.add("done");
+        setTimeout(function () { if (loading.parentNode) loading.parentNode.removeChild(loading); }, 400);
+      }
+      setLoadProgress(0);
+
+      function startUnity(gate) {
+        createUnityInstance(canvas, {
+          arguments: [],
+          // 로더가 dataUrl을 같은 방식(preRun + addRunDependency)으로 기다린다. 배열이어야 로더가 자기 콜백을 push할 수 있다.
+          preRun: gate ? [function (module) {
+            module.addRunDependency("deeperHostReady");
+            gate.then(function () { module.removeRunDependency("deeperHostReady"); }, function () {});
+          }] : [],
+          matchWebGLToCanvasSize: false,
+          // 로더 기본값은 .data·.bundle을 매번 서버에 다시 확인한다(must-revalidate). 서버가 ETag를 안 주면 통째로 다시 받는다.
+          // 이름에 내용 해시가 붙은 파일은 내용이 바뀌면 이름도 바뀌므로 확인 없이 브라우저 캐시를 그대로 쓴다.
+          cacheControl: function (url) {
+            if (/[0-9a-f]{32}\.data(\.unityweb|\.gz|\.br)?$/.test(url) || /_[0-9a-f]{32}\.bundle$/.test(url)) return "immutable";
+            return /\.data|\.bundle/.test(url) ? "must-revalidate" : "no-store";
+          },
+          dataUrl: "Build/90588c4105d1291793cd17cd9d716e87.data.unityweb",
+          frameworkUrl: "Build/abeca120ba6a79d16695cd5ca857aba3.framework.js.unityweb",
+          codeUrl: "Build/d54529c7bf36541e06a0f1440c817b3f.wasm.unityweb",
+          streamingAssetsUrl: "StreamingAssets",
+          companyName: "Gravity",
+          productName: "Deeper Deeper",
+          productVersion: "0.9.0",
+        }, setLoadProgress).then((unityInstance) => {
+          hideLoading();
+        }).catch((message) => {
+          hideLoading();
+          alert(message);
+        });
+      }
+
+      // 다운로드는 바로 시작하고, 게임 실행만 호스트의 DeeperHost.ready(포털 식별 + 저장본 복원)가 resolve될 때까지 붙잡는다.
+      // 저장본은 GameManager가 시작 직후 동기로 읽으므로 실행 전에 끝나 있어야 한다.
+      // 식별 실패 → 호스트가 실패 화면을 띄우고 게임은 실행되지 않음. ready가 없는 호스트(Plain)는 붙잡지 않는다.
+      var hostReady = window.DeeperHost && window.DeeperHost.ready;
+      if (hostReady && typeof hostReady.then === "function") {
+        hostPending = true;
+        hostReady.then(function () { hostPending = false; refreshLoadLabel(); }, hideLoading);
+        startUnity(hostReady);
+      } else {
+        startUnity(null);
+      }
+    </script>
+  </body>
+</html>
