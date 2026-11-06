@@ -154,9 +154,11 @@
       var LOAD_TEXT = {
         ko: { load: "불러오는 중", connect: "접속 중", start: "시작하는 중" },
         ja: { load: "読み込み中", connect: "接続中", start: "起動中" },
-        en: { load: "Loading", connect: "Connecting", start: "Starting" }
+        en: { load: "Loading", connect: "Connecting", start: "Starting" },
+        th: { load: "กำลังโหลด", connect: "กำลังเชื่อมต่อ", start: "กำลังเริ่มเกม" }
       };
-      var loadText = LOAD_TEXT[String(navigator.language || "en").slice(0, 2)] || LOAD_TEXT.en;
+      // 시연 빌드는 게임이 매번 태국어로 시작하므로(LocalizationService.StartupLocaleCode) 로딩 문구도 브라우저 언어와 무관하게 태국어.
+      var loadText = LOAD_TEXT.th;
       var loadFill = loading.querySelector(".fill");
       var loadLabel = loading.querySelector(".label");
       var loadPct = loading.querySelector(".pct");
